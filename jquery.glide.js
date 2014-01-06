@@ -1,6 +1,6 @@
 /*
  * Glide.js
- * Ver: 1.0.5
+ * Ver: 1.0.6
  * Simple, lightweight and fast jQuery slider
  * url: http://jedrzejchalubek.com/glide
  * Autor: @JedrzejChalubek
@@ -16,15 +16,16 @@
 			autoplay: 4000,
 			// {Bool} Pause autoplay on mouseover slider
 			hoverpause: true,
+
+			// {Bool} Circual play
+			circular: true,
 			
-			/**
-			 * Animation time 
-			 * !!! IMPORTANT !!!
-			 * That option will be use only, when css3 are not suported
-			 * If css3 are supported animation time is set in css declaration inside .css file
-			 * @type {Int}
-			 */
-			animationTime: 500,
+			// {String} Animation proprty
+			animationProperty: 'all',
+			// {Int} Animation time
+			animationDuration: 500,
+			// {String} Animation easing function
+			animationTimingFunc: 'cubic-bezier(0.165, 0.840, 0.440, 1.000)',
 
 			/**
 			 * {Bool or String} Show/hide/appendTo arrows
@@ -102,16 +103,6 @@
 		// CSS3 Animation support
 		_.CSS3support = true;
 
-		// Callbacks before plugin init
-		_.options.beforeInit.call(_);
-
-		// Initialize
-		_.init();
-		// Build DOM
-		_.build();
-		// Start autoplay
-		_.play();
-
 		/**
 		 * Controller
 		 * Touch events
@@ -126,12 +117,12 @@
 		 * Keyboard left and right arrow keys
 		 */
 		if (_.options.keyboard) {
-			$(document).on('keyup', function(k) {
+			_.eventKeyboard = function(k) {
 				// Next
 				if (k.keyCode === 39) _.slide(1);
 				// Prev
 				if (k.keyCode === 37) _.slide(-1);
-			});
+			}
 		}
 
 		/**
@@ -141,15 +132,16 @@
 		 * On out, start autoplay again
 		 */
 		if (_.options.hoverpause) {
-			_.parent.add(_.arrows).add(_.nav).on('mouseover mouseout', function(e) {
+			_.eventHover = function(e) {
 				// Pasue autoplay
 				_.pause();
 				// When mouse left slider or touch end, start autoplay anew
 				if (e.type === 'mouseout') _.play();
-			});
+			}
 		}
 
 		/**
+		 * !!! TO DO !!!
 		 * Controller
 		 * When resize browser window
 		 * Pause autoplay in fear of escalation
@@ -163,6 +155,16 @@
 			// Crop to current slide
 			_.slide(0);
 		});
+
+		// Callbacks before plugin init
+		_.options.beforeInit.call(_);
+
+		// Initialize
+		_.init();
+		// Build DOM
+		_.build();
+		// Start autoplay
+		_.play();
 
 		// Callback after plugin init
 		_.options.afterInit.call(_);
@@ -264,7 +266,61 @@
 		
 		// Cache this
 		var _ = this;
-		
+
+		$(document).bind('keyup.glideKeyup', _.eventKeyboard);
+
+		_.parent.add(_.arrows).add(_.nav).bind('mouseover mouseout', _.eventHover);
+
+		_.wrapper.bind('setTransition', function(){
+			
+			var o = _.options
+			
+			$(this).css({
+				'-webkit-transition': o.animationProperty + ' ' + o.animationDuration + 'ms ' + o.animationTimingFunc, 
+				   '-moz-transition': o.animationProperty + ' ' + o.animationDuration + 'ms ' + o.animationTimingFunc, 
+				    '-ms-transition': o.animationProperty + ' ' + o.animationDuration + 'ms ' + o.animationTimingFunc, 
+				     '-o-transition': o.animationProperty + ' ' + o.animationDuration + 'ms ' + o.animationTimingFunc, 
+				        'transition': o.animationProperty + ' ' + o.animationDuration + 'ms ' + o.animationTimingFunc
+			});
+
+		}).bind('clearTransition', function(){
+			
+			$(this).css({
+				'-webkit-transition-duration': '0ms',
+				   '-moz-transition-duration': '0ms',
+				    '-ms-transition-duration': '0ms',
+				     '-o-transition-duration': '0ms',
+				        'transition-duration': '0ms'
+			});
+
+		}).bind('setTranslate', function(e, translate){
+			
+			if (_.CSS3support) {
+				$(this).css({
+					'-webkit-transform': 'translate3d(' + translate + 'px, 0px, 0px)', 
+					   '-moz-transform': 'translate3d(' + translate + 'px, 0px, 0px)', 
+					    '-ms-transform': 'translate3d(' + translate + 'px, 0px, 0px)', 
+					     '-o-transform': 'translate3d(' + translate + 'px, 0px, 0px)', 
+					        'transform': 'translate3d(' + translate + 'px, 0px, 0px)' 
+				});
+			} else {
+				$(this).css({ 'margin-left': translate });
+			}
+
+		});
+
+		if (_.options.circular) {
+			
+			var firstSlideClone = _.slides.filter(':first-child').clone().width(_.slides.spread),
+				lastSlideClone = _.slides.filter(':last-child').clone().width(_.slides.spread);
+
+			_.wrapper.append(firstSlideClone).prepend(lastSlideClone)
+				.width( _.parent.width() * (_.slides.length + 2) )
+					.trigger('clearTransition')
+						.trigger('setTranslate', [- _.slides.spread]);
+
+		}
+	
 		/**
 		 * Arrows
 		 * If option is true and there is more than one slide
@@ -278,7 +334,7 @@
 		 * Append navigation item for each slide
 		 */
 		if (_.options.nav) _.navigation();
-	
+
 	};
 
 	/**
@@ -342,12 +398,15 @@
 			 * On click in arrows or navigation, get direction and distance
 			 * Then slide specified distance
 			 */
-			navChildren.on('click touchstart', function(e) {
+			_.eventNav = function(e) {
 				// prevent normal behaviour
 				e.preventDefault();
 				// Slide distance specified in data attribute
 				_.slide( $(this).data('distance'), true );
-			});
+			}
+
+			navChildren.bind('click touchstart', _.eventNav);
+
 		}
 	
 	};
@@ -402,12 +461,15 @@
 			 * On click in arrows or navigation, get direction and distance
 			 * Then slide specified distance
 			 */
-			arrows.children().on('click touchstart', function(e) {
+			_.eventArrows = function(e) {
 				// prevent normal behaviour
 				e.preventDefault();
 				// Slide distance specified in data attribute
 				_.slide( $(this).data('distance'), false );
-			});
+			}
+
+			arrows.children().bind('click touchstart', _.eventArrows);
+
 		}
 	
 	};
@@ -424,7 +486,7 @@
 		// Cache this
 		var _ = this;
 
-		/**
+		/**§
 		 * Stop autoplay
 		 * Clearing timer
 		 */
@@ -437,7 +499,9 @@
 		var	currentSlide = (jump) ? 0 : _.currentSlide,
 			slidesLength = -(_.slides.length-1),
 			navCurrentClass = _.options.navCurrentItemClass,
-			slidesSpread = _.slides.spread;
+			slidesSpread = _.slides.spread,
+			fromFirst = false,
+			fromLast = false;
 
 		/**
 		 * Check if current slide is first and direction is previous, then go to last slide
@@ -445,8 +509,10 @@
 		 * else change current slide normally
 		 */
 		if ( currentSlide === 0 && distance === -1 ) {
+			fromFirst = true;
 			currentSlide = slidesLength;
 		} else if ( currentSlide === slidesLength && distance === 1 ) {
+			fromLast = true;
 			currentSlide = 0;
 		} else {
 			currentSlide = currentSlide + (-distance);
@@ -456,23 +522,74 @@
 		 * Crop to current slide.
 		 * Mul slide width by current slide number.
 		 */
-		var translate = slidesSpread * currentSlide + 'px';
+		var translate = slidesSpread * currentSlide;
+			
+		if (_.options.circular) {
+			
+			translate = translate - slidesSpread;
+			
+			if (fromLast) {
+				translate = slidesSpread * (slidesLength - 2);
+				
+				_.navWrapper.children().unbind('click touchstart');
+				_.arrowsWrapper.children().unbind('click touchstart');
+				$(document).unbind('keyup.glideKeyup');
+			}
+
+			if (fromFirst) {
+				translate = 0;
+				
+				_.navWrapper.children().unbind('click touchstart');
+				_.arrowsWrapper.children().unbind('click touchstart');
+				$(document).unbind('keyup.glideKeyup');
+			}
+
+		}
 
 		// While CSS3 is supported
 		if (_.CSS3support) {
 			// Croping by increasing/decreasing slider wrapper translate
-			_.wrapper.css({
-				'-webkit-transform': 'translate3d(' + translate + ', 0px, 0px)', 
-				   '-moz-transform': 'translate3d(' + translate + ', 0px, 0px)', 
-				    '-ms-transform': 'translate3d(' + translate + ', 0px, 0px)', 
-				     '-o-transform': 'translate3d(' + translate + ', 0px, 0px)', 
-				        'transform': 'translate3d(' + translate + ', 0px, 0px)' 
-			});
+			_.wrapper.trigger('setTransition').trigger('setTranslate', [translate]);
 		// Else use $.animate()
 		} else {
 			// Croping by increasing/decreasing slider wrapper margin
-			_.wrapper.stop()
-				.animate({ 'margin-left': translate }, _.options.animationTime);
+			_.wrapper.stop().animate({ 'margin-left': translate }, _.options.animationDuration);
+		}
+
+		if (_.options.circular) {
+			
+			if (fromLast) {
+				setTimeout(function (){
+
+					fromLast = false;
+					
+					_.navWrapper.children().bind('click touchstart', _.eventNav);
+					_.arrowsWrapper.children().bind('click touchstart', _.eventArrows);
+					$(document).bind('keyup.glideKeyup', _.eventKeyboard);
+
+					_.wrapper
+						.trigger('clearTransition')
+						.trigger('setTranslate', [- _.slides.spread]);
+
+				}, _.options.animationDuration);	
+			}
+
+			if (fromFirst) {
+				setTimeout(function (){
+
+					fromFirst = false;
+
+					_.navWrapper.children().bind('click touchstart', _.eventNav);
+					_.arrowsWrapper.children().bind('click touchstart', _.eventArrows);
+					$(document).bind('keyup.glideKeyup', _.eventKeyboard);
+
+					_.wrapper
+						.trigger('clearTransition')
+						.trigger('setTranslate', [_.slides.spread * (slidesLength-1)]);
+
+				}, _.options.animationDuration);
+			}
+
 		}
 
 		// Set to navigation item current class

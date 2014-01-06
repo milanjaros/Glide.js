@@ -64,7 +64,7 @@ Here is list of all available
 |-------|--------|-----|-----
 | `autoplay` | `4000` | int/bool | False for turning off autoplay
 | `hoverpause` | `true` | bool | Pause autoplay on mouseover slider 
-| `animationTime` | `500` | int | !!! That option will be use only, when css3 are not suported. If css3 are supported animation time is set in css transitions declaration inside .css file !!!
+| `animationDuration` | `500` | int | !!! That option will be use only, when css3 are not suported. If css3 are supported animation time is set in css transitions declaration inside .css file !!!
 | `arrows` | `true` | bool/string | Show/hide/appendTo arrows. True for append arrows to slider wrapper. False for not appending arrows. Id or class name (e.g. '.class-name') for appending to specific HTML markup
 | `arrowsWrapperClass` | `slider-arrows` | string | Arrows wrapper class
 | `arrowMainClass` | `slider-arrow` | string | Main class for both arrows
@@ -110,6 +110,13 @@ glide.jump(3, console.log('Wooo!'));
 
 
 ##Changelog
+`1.0.6` / `03.01.2014`
+
+- Added circular functionality
+- Renamed option `animationTime` to `animationDuration`
+- Added option `animationProperty`, `animationTimingFunc`
+- Removed trasition settings from css file, now it's united and set via plugin options
+
 `1.0.5` / `25.11.2013`
 
 - Added after and before transition callbacks
