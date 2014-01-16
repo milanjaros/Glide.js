@@ -3,7 +3,7 @@
  | Glide styles
  | ------------------------------------------
  | Here are slider styles
- | 
+ |
 */
 
 .slider {
@@ -12,21 +12,22 @@
 	height: 420px;
 	overflow: hidden;
 }
-	
+
 	.slides {
 		height: 100%;
-		
+		list-style:none;
+
 		/* Simple clear fix */
 		overflow: hidden;
-		
-		/**	
+
+		/**
 		 * Prevent blinking issue
 		 * Not tested. Experimental.
 		 */
 		-webkit-backface-visibility: hidden;
 		-webkit-transform-style: preserve-3d;
 	}
-	
+
 		.slide {
 			height: 100%;
 			float: left;
