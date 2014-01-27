@@ -351,7 +351,7 @@
 		// Cache this
 		var _ = this;
 		
-		if (_.slides.length > 1) {
+		if (typeof _.slides !== "undefined" && _.slides.length > 1) {
 			// Setup variables
 			var o = _.options,
 				/**
